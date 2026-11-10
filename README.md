@@ -26,7 +26,7 @@ Les variables `VITE_` sont publiques dans le code distribué au navigateur : **n
 
 ## Résumé par IA
 
-Gemini est configuré côté serveur pour analyser les messages sélectionnés. L'analyse de la semaine est déclenchée par l'utilisateur et transmet les messages à Google ; utiliser uniquement si l'organisation l'autorise. Les résultats sont à vérifier et les quotas gratuits peuvent limiter l'utilisation.
+Gemini est configuré côté serveur pour analyser les messages sélectionnés. L'analyse des 72 dernières heures est déclenchée par l'utilisateur et transmet les messages à Google ; utiliser uniquement si l'organisation l'autorise. Les résultats sont à vérifier et les quotas gratuits peuvent limiter l'utilisation.
 
 ## Base de données
 
@@ -34,7 +34,7 @@ Pas nécessaire pour la première version personnelle. Une base comme Supabase d
 
 ## Limites
 
-- Gmail : jusqu’à 50 résultats correspondant aux 7 derniers jours ; un avertissement indique si d’autres pages existent. La recherche de l’interface porte uniquement sur les messages chargés. Outlook : filtre sur les 15 derniers messages récupérés.
+- Gmail : jusqu’à 50 résultats correspondant aux 72 dernières heures ; un avertissement indique si d’autres pages existent. La recherche de l’interface porte uniquement sur les messages chargés. Outlook : filtre sur les 15 derniers messages récupérés.
 - Agenda : événements entre hier et les 14 prochains jours, 30 maximum. Les événements passés ne sont pas affichés.
 - Tâches locales au navigateur, sans notifications externes.
 - La connexion dépend de la configuration Microsoft, du consentement et de l'accès réel au compte ; elle ne peut être vérifiée sans ces éléments.
@@ -51,12 +51,14 @@ Gmail utilise le flux de jeton Google Identity Services côté navigateur. L'acc
 
 ## Filtre Emmaüs
 
-Les e-mails réels affichés sont filtrés sur le domaine exact de l'adresse d'expéditeur `@emmaus-scherwiller.fr` (sans sous-domaines). Pour Gmail, la recherche couvre les 7 derniers jours et les 50 premiers résultats au maximum après vérification du domaine. Les messages hors boîte de réception sont inclus, sauf spam et corbeille par défaut. Un avertissement signale les résultats supplémentaires non chargés. Pour Outlook, le filtre s'applique aux 15 derniers messages récupérés : il est donc possible qu'aucun e-mail ne s'affiche si les messages Emmaüs sont plus anciens. L'adresse affichée de l'expéditeur n'est pas à elle seule une garantie que l'e-mail est authentique. Les résumés IA sont demandés manuellement et transmettent le contenu des messages à Gemini.
+Les e-mails réels affichés sont filtrés sur le domaine exact de l'adresse d'expéditeur `@emmaus-scherwiller.fr` (sans sous-domaines). Pour Gmail, la recherche couvre les 72 dernières heures et les 50 premiers résultats au maximum après vérification du domaine. Les messages hors boîte de réception sont inclus, sauf spam et corbeille par défaut. Un avertissement signale les résultats supplémentaires non chargés. Pour Outlook, le filtre s'applique aux 15 derniers messages récupérés : il est donc possible qu'aucun e-mail ne s'affiche si les messages Emmaüs sont plus anciens. L'adresse affichée de l'expéditeur n'est pas à elle seule une garantie que l'e-mail est authentique. Les résumés IA sont demandés manuellement et transmettent le contenu des messages à Gemini.
 
 ## Analyse Gemini (préparée, à configurer et valider)
 
-Le bouton « Analyser la semaine » envoie chaque e-mail trouvé à Google Gemini via la fonction `api/analyze.js` ; les résumés, actions et échéances sont rassemblés en un seul briefing. Chaque message entraîne une requête distincte auprès de Gemini. L'accès est limité au compte `ALLOWED_GOOGLE_EMAIL`, après validation de l'audience et de la portée du jeton Google ainsi que de l'adresse du profil Gmail. La fonction vérifie aussi le domaine expéditeur, récupère le message auprès de Gmail et ne transmet qu'un maximum de 12 000 caractères de texte, sans pièces jointes. L'adresse From est falsifiable et ne prouve pas l'authenticité d'un message. Les résultats de l'IA peuvent contenir des erreurs et sont à vérifier.
+Le bouton « Analyser les 72 heures » envoie chaque e-mail trouvé à Google Gemini via la fonction `api/analyze.js` ; les résumés, actions et échéances sont rassemblés en un seul briefing. Chaque message entraîne une requête distincte auprès de Gemini. L'accès est limité au compte `ALLOWED_GOOGLE_EMAIL`, après validation de l'audience et de la portée du jeton Google ainsi que de l'adresse du profil Gmail. La fonction vérifie aussi le domaine expéditeur, récupère le message auprès de Gmail et ne transmet qu'un maximum de 12 000 caractères de texte, sans pièces jointes. L'adresse From est falsifiable et ne prouve pas l'authenticité d'un message. Les résultats de l'IA peuvent contenir des erreurs et sont à vérifier.
 
 Dans Vercel ajouter `GEMINI_API_KEY` (variable serveur sensible, JAMAIS préfixée VITE_), `ALLOWED_GOOGLE_EMAIL` (votre adresse Gmail) et éventuellement `GEMINI_MODEL` (par défaut `gemini-3.1-flash-lite` ; disponibilité et quota à vérifier dans Google AI Studio). `VITE_GOOGLE_CLIENT_ID` doit aussi être défini. Redéployer. La clé Gemini doit être saisie directement dans Vercel et ne doit jamais être publiée dans Git ni collée dans une conversation.
 
 Avant d'utiliser des courriels professionnels réels, vérifier l'autorisation de l'organisation et les conditions de traitement du fournisseur ; l'offre gratuite Gemini peut utiliser les données pour améliorer les produits de Google. Les limites de requêtes en mémoire de la fonction sont seulement indicatives, car les fonctions serverless ont plusieurs instances. Pour un usage réel fiable, ajouter une limitation distribuée et des plafonds de quota, surveiller les dépenses et examiner les exigences de sécurité et conformité. Le mode `npm run dev` de Vite ne lance pas les fonctions Vercel : utiliser Vercel CLI pour l'intégration locale ou une deployment de test.
+
+Les actions extraites sont ajoutées automatiquement aux tâches locales. Les échéances avec date complète identifiable dans le texte sont ajoutées à l’agenda local, avec l’heure seulement si elle est explicitement reconnue ; les dates imprécises restent à vérifier. Les imports sont dédupliqués par message ; les tâches et échéances restent sur cet appareil.
