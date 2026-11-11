@@ -11,3 +11,6 @@ Les réglages prennent effet lors de la sauvegarde, pas pendant la modification.
 
 ## QA
 Interface simulée avec données fictives : sauvegarde et confirmation, application différée, brouillon préservé lors de la navigation, panne de stockage et nouvelle tentative, ville météo, conflit avec un autre onglet. Tests existants de synchronisation, messagerie, build et audit.
+
+## Amélioration UX/UI
+Le bouton se trouve en bas de la page complète des paramètres. Une fenêtre de confirmation récapitule les modifications, permet d’annuler ou de confirmer et prend en charge le clavier. Pendant l’opération, un indicateur est affiché ; une confirmation avec coche ne concerne que la sauvegarde sur l’appareil, pas la synchronisation distante. En cas de conflit ou d’erreur, aucune confirmation de réussite n’est affichée.
