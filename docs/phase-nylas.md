@@ -1,5 +1,7 @@
 # Intégration Nylas : étapes et limites
 
+Note historique : le parcours Gmail direct mentionné ci-dessous a ensuite été retiré à la demande de l’utilisateur ; voir `phase-nylas-unique.md`.
+
 ## Architecte
 OAuth hébergé Nylas avec vérification d'état et PKCE, clé Nylas gardée côté serveur et cookie de session HttpOnly, Secure, SameSite, signé avec un secret distinct. Connexion réservée à l'adresse autorisée, validée en lecture seule après l'autorisation par Google. Le champ From et la date sont vérifiés côté serveur avant l'analyse Gemini ; aucune pièce jointe n'est analysée.
 
