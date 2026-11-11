@@ -1,0 +1,8 @@
+const fs=require('fs');const {initializeTestEnvironment,assertFails,assertSucceeds}=require('@firebase/rules-unit-testing');const {doc,getDoc,setDoc,deleteDoc}=require('firebase/firestore');
+(async()=>{const env=await initializeTestEnvironment({projectId:'demo-pilotage-tests',firestore:{rules:fs.readFileSync('docs/firestore-regles-v2.rules','utf8').replaceAll('TON_ADRESSE_GOOGLE','owner@example.test')}});try{
+ const token={email:'owner@example.test',email_verified:true,firebase:{sign_in_provider:'google.com'}};
+ const owner=env.authenticatedContext('owner',token).firestore(),other=env.authenticatedContext('other',{...token,email:'other@example.test'}).firestore(),no=env.unauthenticatedContext().firestore(),id='i_'+'a'.repeat(64),path='pilotage_users/owner/notes/'+id,data={schemaVersion:1,revision:1,deleted:false,data:{id:'a',text:'test',updatedAt:1}};
+ await assertSucceeds(setDoc(doc(owner,path),data));await assertSucceeds(getDoc(doc(owner,path)));await assertFails(getDoc(doc(no,path)));await assertFails(getDoc(doc(other,path)));await assertFails(setDoc(doc(other,path),data));
+ await assertFails(setDoc(doc(owner,'pilotage_users/other/notes/'+id),data));await assertFails(setDoc(doc(owner,'pilotage_users/owner/other/'+id),data));await assertFails(setDoc(doc(owner,'pilotage_users/owner/tasks/bad-id'),data));
+ await assertFails(setDoc(doc(owner,path),{...data,revision:3}));await assertSucceeds(setDoc(doc(owner,path),{...data,revision:2,deleted:true,data:{}}));await assertFails(deleteDoc(doc(owner,path)));console.log('Règles Firestore : isolation et révisions OK');
+ }finally{await env.cleanup()}})().catch(e=>{console.error(e);process.exitCode=1});
