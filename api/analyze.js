@@ -1,4 +1,5 @@
 import { validateDeadline } from '../src/lib/deadline.js';
+import { session as nylasSession, nylas, allowedMessage, plain } from '../server/nylas.js';
 // Analyse côté serveur. Ne journalise ni jetons, ni courriels, ni réponse du modèle.
 const DOMAIN = 'emmaus-scherwiller.fr';
 const MAX_CHARS = 12000;
@@ -31,21 +32,32 @@ export default async function handler(req, res) {
   const apiKey = process.env.GEMINI_API_KEY;
   const clientId = process.env.VITE_GOOGLE_CLIENT_ID;
   const allowedEmail = (process.env.ALLOWED_GOOGLE_EMAIL || '').trim().toLowerCase();
-  if (!apiKey || !clientId || !allowedEmail) return res.status(503).json({error:'L’analyse IA n’est pas configurée sur le serveur.'});
+  if (!apiKey || !allowedEmail) return res.status(503).json({error:'L’analyse IA n’est pas configurée sur le serveur.'});
   const match = (req.headers.authorization || '').match(/^Bearer ([A-Za-z0-9._~+\/-]+)$/);
   const messageId = req.body?.messageId;
-  if (!match || typeof messageId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(messageId)) return res.status(400).json({error:'Requête invalide.'});
+  if ((!match && !nylasSession(req)) || typeof messageId !== 'string' || !/^[a-zA-Z0-9_-]{1,128}$/.test(messageId)) return res.status(400).json({error:'Requête invalide.'});
   try {
-    const token = match[1];
-    const tokenInfo = await jsonFetch('https://oauth2.googleapis.com/tokeninfo', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({access_token: token})});
-    if (tokenInfo.aud !== clientId || Number(tokenInfo.expires_in) <= 0 || !(tokenInfo.scope || '').split(' ').includes('https://www.googleapis.com/auth/gmail.readonly')) return res.status(403).json({error:'Session Google non autorisée.'});
-    const headers = {Authorization:'Bearer '+token};
-    const profile = await jsonFetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {headers});
-    if ((profile.emailAddress || '').toLowerCase() !== allowedEmail) return res.status(403).json({error:'Ce compte n’est pas autorisé à utiliser l’analyse.'});
+    const ns=nylasSession(req);
+    let msg;
+    if(ns){
+      const result=await nylas('/v3/grants/'+encodeURIComponent(ns.grant)+'/messages/'+encodeURIComponent(messageId));
+      const m=result.data;
+      if(!m||!allowedMessage(m))return res.status(403).json({error:'Ce message ne correspond pas au domaine ou à la période autorisés.'});
+      const body=plain(m.body);
+      msg={internalDate:String(Number(m.date)*1000),payload:{mimeType:'text/plain',headers:[{name:'from',value:m.from[0].email},{name:'subject',value:String(m.subject||'')},{name:'date',value:new Date(Number(m.date)*1000).toISOString()}],body:{data:Buffer.from(body).toString('base64url')}}};
+    } else {
+      if(!clientId) return res.status(503).json({error:'La connexion Gmail directe n’est pas configurée.'});
+      const token = match[1];
+      const tokenInfo = await jsonFetch('https://oauth2.googleapis.com/tokeninfo', {method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({access_token: token})});
+      if (tokenInfo.aud !== clientId || Number(tokenInfo.expires_in) <= 0 || !(tokenInfo.scope || '').split(' ').includes('https://www.googleapis.com/auth/gmail.readonly')) return res.status(403).json({error:'Session Google non autorisée.'});
+      const headers = {Authorization:'Bearer '+token};
+      const profile = await jsonFetch('https://gmail.googleapis.com/gmail/v1/users/me/profile', {headers});
+      if ((profile.emailAddress || '').toLowerCase() !== allowedEmail) return res.status(403).json({error:'Ce compte n’est pas autorisé à utiliser l’analyse.'});
+      msg = await jsonFetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+encodeURIComponent(messageId)+'?format=full', {headers});
+    }
     const now=Date.now();const previous=(buckets.get(allowedEmail)||[]).filter(t=>now-t<60000);
     if(previous.length>=50)return res.status(429).json({error:'Trop de demandes. Réessayez dans une minute.'});
     buckets.set(allowedEmail,[...previous,now]);
-    const msg = await jsonFetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/'+encodeURIComponent(messageId)+'?format=full', {headers});
     if (!Number.isFinite(Number(msg.internalDate)) || Number(msg.internalDate) < Date.now()-72*60*60*1000 || Number(msg.internalDate) > Date.now()+5*60*1000) return res.status(403).json({error:'Ce message est en dehors des dernières 72 heures.'});
     const header = key => (msg.payload?.headers || []).find(h=>h.name?.toLowerCase()===key)?.value || '';
     const address = extractAddress(header('from'));
