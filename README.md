@@ -20,7 +20,9 @@ Le callback Nylas pour le site actuel est `https://copilot-app-phi.vercel.app/ap
 
 ## Tests
 
-`node --test tests/*.test.js`, `node tests/sync-ui.cjs`, `npm run build`, `npm audit`. Les tests utilisent des données fictives. Pour les règles, installer temporairement les outils avec `npm install --no-save --package-lock=false firebase-tools@13.35.1 @firebase/rules-unit-testing@5`, puis `npx firebase emulators:exec --project demo-pilotage-tests --config tests/firebase-emulator.json --only firestore 'node tests/firestore-rules.emulator.cjs && node tests/sync-firestore.emulator.mjs'`. Ces tests utilisent exclusivement le projet fictif et l'émulateur local. Tester la connexion réelle uniquement avec le propriétaire ; ne pas consulter d'e-mails réels pour les essais.
+`node --test tests/*.test.js`, `node tests/sync-ui.cjs`, `node tests/loading-ui.cjs`, `npm run build`, `npm audit`. Les tests utilisent des données fictives. Pour les règles, installer temporairement les outils avec `npm install --no-save --package-lock=false firebase-tools@13.35.1 @firebase/rules-unit-testing@5`, puis `npx firebase emulators:exec --project demo-pilotage-tests --config tests/firebase-emulator.json --only firestore 'node tests/firestore-rules.emulator.cjs && node tests/sync-firestore.emulator.mjs'`. Ces tests utilisent exclusivement le projet fictif et l'émulateur local. Tester la connexion réelle uniquement avec le propriétaire ; ne pas consulter d'e-mails réels pour les essais.
+
+À l’ouverture, les indicateurs de chargement remplacent les anciens e-mails et rendez-vous d’exemple. Si la messagerie n’est pas connectée ou si la vérification échoue, un message distinct apparaît ; les données déjà enregistrées ne sont pas supprimées.
 
 ## Widget météo
 
