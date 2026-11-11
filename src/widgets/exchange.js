@@ -4,7 +4,7 @@ export function readExchange(){try{const data=JSON.parse(localStorage.getItem(EX
 export function calculateExchange(data){
  if(!validExchange(data))return null;
  const {usd,eur,afn}=data.quotes;
- return {eur:{USD:eur.toman/usd.toman,AFN:eur.toman/afn.toman,IRR:eur.toman*10},usd:{EUR:usd.toman/eur.toman,AFN:usd.toman/afn.toman,IRR:usd.toman*10}};
+ return {eur:{USD:eur.toman/usd.toman,AFN:eur.toman/afn.toman,TOMAN:eur.toman},usd:{EUR:usd.toman/eur.toman,AFN:usd.toman/afn.toman,TOMAN:usd.toman}};
 }
 export function quoteTime(data){return Math.min(...['usd','eur','afn'].map(k=>data.quotes[k].timestamp))*1000}
 
