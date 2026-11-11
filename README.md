@@ -29,3 +29,7 @@ Depuis la vue d’ensemble, choisir une ville ; les résultats proposent la rég
 ### Réglages des widgets
 
 Dans Paramètres → Widgets du tableau de bord : afficher ou masquer chaque compteur et les widgets météo, briefing, e-mails, agenda et tâches. L'affichage des pages détaillées et les données restent inchangés. Dans les paramètres météo, choisir la ville, les degrés Celsius ou Fahrenheit et un intervalle de 15, 30 ou 60 minutes, ou désactiver l'actualisation automatique. Un chargement reste effectué à l'ouverture de la vue, et le bouton d'actualisation manuelle reste disponible. Tous ces réglages restent propres au navigateur ; la ville déjà choisie est conservée.
+
+## Notes rapides
+
+Le widget Notes rapides permet d'ajouter, modifier et supprimer des notes dans la vue d'ensemble ; il peut être masqué dans Paramètres sans les effacer. Les notes sont stockées sur l'appareil, dans le navigateur, sans synchronisation ni sauvegarde cloud. Elles ne sont pas chiffrées : ne pas y enregistrer de mots de passe ou de données sensibles. Limite de 200 notes de 2 000 caractères chacune. Effacer les données du navigateur peut les supprimer.
