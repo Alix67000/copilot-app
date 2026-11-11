@@ -5,7 +5,7 @@ export default async function handler(req,res){
  if(action==='start'&&req.method==='GET'){
   if(!process.env.NYLAS_API_KEY||!process.env.NYLAS_CLIENT_ID||!process.env.NYLAS_SESSION_SECRET||!process.env.ALLOWED_GOOGLE_EMAIL)return res.status(503).send('Connexion Nylas non configurée.');
   const s=newState();res.setHeader('Set-Cookie',stateCookie(s.state,s.verifier));
-  const q=new URLSearchParams({client_id:process.env.NYLAS_CLIENT_ID,redirect_uri:CALLBACK,response_type:'code',provider:'google',access_type:'offline',scope:READ_SCOPE,state:s.state,code_challenge:s.challenge,code_challenge_method:'S256'});
+  const q=new URLSearchParams({client_id:process.env.NYLAS_CLIENT_ID,redirect_uri:CALLBACK,response_type:'code',provider:'google',access_type:'offline',scope:READ_SCOPE,state:s.state,code_challenge:s.challenge,code_challenge_method:'s256'});
   return res.redirect(302,nylasBase()+'/v3/connect/auth?'+q.toString());
  }
  if(action==='logout'&&req.method==='POST'){

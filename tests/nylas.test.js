@@ -1,15 +1,15 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {sign,verify,sessionCookie,READ_SCOPE,allowedMessage,plain} from '../server/nylas.js';
+import {sign,verify,sessionCookie,READ_SCOPE,allowedMessage,plain,nylasChallenge} from '../server/nylas.js';
 import handler from '../api/nylas.js';
 import callback from '../api/nylas-callback.js';
 import analyze from '../api/analyze.js';
 process.env.NYLAS_API_KEY='secret-test-seulement';process.env.NYLAS_SESSION_SECRET='secret-de-test-dedie-et-assez-long';process.env.NYLAS_CLIENT_ID='client-test';process.env.NYLAS_API_URI='https://api.eu.nylas.com';process.env.ALLOWED_GOOGLE_EMAIL='owner@example.com';process.env.GEMINI_API_KEY='fake';
 const from=[{email:'staff@emmaus-scherwiller.fr',name:'Service'}];
 const sample={id:'abc123',date:Math.floor(Date.now()/1000),subject:'Test',from,body:'<p>Vérifier la sauvegarde avant le 3 décembre 2026 à 14h30.</p>',snippet:'Test',unread:true};
-let calls=[], mode='ok', grantScope=[READ_SCOPE,'openid','https://www.googleapis.com/auth/userinfo.email','https://www.googleapis.com/auth/userinfo.profile'];
+let calls=[], expectedVerifier, mode='ok', grantScope=[READ_SCOPE,'openid','https://www.googleapis.com/auth/userinfo.email','https://www.googleapis.com/auth/userinfo.profile'];
 globalThis.fetch=async(url,opts={})=>{calls.push({url:String(url),method:opts.method||'GET'});let data;
- if(String(url).includes('/connect/token')){if(mode==='exchange-fail')return {ok:false,status:400,json:async()=>({error:'invalid_grant',error_code:45004,error_description:'Code verifier challenge failed'})};if(mode==='code-fail')return {ok:false,status:400,json:async()=>({error:'invalid_grant',error_description:"Given code not valid or expired"})};data={grant_id:mode==='no-grant'?'!':'grant-test'};}
+ if(String(url).includes('/connect/token')){assert.equal(JSON.parse(opts.body).code_verifier,expectedVerifier);if(mode==='exchange-fail')return {ok:false,status:400,json:async()=>({error:'invalid_grant',error_code:45004,error_description:'Code verifier challenge failed'})};if(mode==='code-fail')return {ok:false,status:400,json:async()=>({error:'invalid_grant',error_description:"Given code not valid or expired"})};data={grant_id:mode==='no-grant'?'!':'grant-test'};}
  else if(String(url).includes('/grants/grant-test/messages/'))data={data:sample};
  else if(String(url).includes('/grants/grant-test/messages?'))data={data:[sample,{...sample,id:'other',from:[{email:'bad@emmaus-scherwiller.fr.evil.test'}]}]};
  else if(String(url).includes('/grants/grant-test')){if(mode==='lookup-fail')return {ok:false,status:503};data={data:{provider:'google',email:'owner@example.com',grant_status:'valid',scope:grantScope}};}
@@ -19,7 +19,7 @@ function response(){return {statusCode:200,headers:{},setHeader(k,v){this.header
 const value=(header)=>Array.isArray(header)?header[0].split(';')[0]:header.split(';')[0];
 test('cookie signé et protection des messages',()=>{let val=sign({kind:'x',exp:Date.now()+10000});assert.equal(verify(val).kind,'x');assert.equal(verify(val+'x'),null);assert.equal(verify(sign({exp:Date.now()-1})),null);assert.equal(allowedMessage(sample),true);assert.equal(allowedMessage({...sample,from:[{email:'a@emmaus-scherwiller.fr.evil.test'}]}),false);assert.equal(plain('<p>bonjour &amp; salut</p>'),' bonjour & salut ')});
 test('connexion, permissions et analyse avec Nylas simulé',async()=>{
- let r=response();await handler({method:'GET',query:{action:'start'},headers:{}},r);assert.equal(r.statusCode,302);const u=new URL(r.location);assert.equal(u.searchParams.get('scope'),READ_SCOPE);assert.equal(u.searchParams.get('code_challenge_method'),'S256');const stateCookie=value(r.headers['Set-Cookie']);const state=u.searchParams.get('state');
+ let r=response();await handler({method:'GET',query:{action:'start'},headers:{}},r);assert.equal(r.statusCode,302);const u=new URL(r.location);assert.equal(u.searchParams.get('scope'),READ_SCOPE);assert.equal(u.searchParams.get('code_challenge_method'),'s256');const stateCookie=value(r.headers['Set-Cookie']);const state=u.searchParams.get('state');const payload=verify(stateCookie.split('=')[1]);expectedVerifier=payload.verifier;assert.equal(u.searchParams.get('code_challenge'),nylasChallenge(payload.verifier));assert.equal(nylasChallenge('nylas'),'ZTk2YmY2Njg2YTNjMzUxMGU5ZTkyN2RiNzA2OWNiMWNiYTliOTliMDIyZjQ5NDgzYTZjZTMyNzA4MDllNjhhMg');
  r=response();await callback({method:'GET',headers:{cookie:stateCookie},query:{code:'test-code',state:'autre'}},r);assert.match(r.location,/nylas=session/);
 
  r=response();await callback({method:'GET',headers:{cookie:stateCookie},query:{error:'access_denied',state}},r);assert.match(r.location,/nylas=refus/);

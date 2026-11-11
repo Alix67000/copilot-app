@@ -11,7 +11,9 @@ export function sign(data){const s=Buffer.from(JSON.stringify(data)).toString('b
 export function verify(value){try {const [payload,mac,...extra]=(value||'').split('.');if(extra.length||!payload||!mac)return null;const a=Buffer.from(mac),b=Buffer.from(signature(payload));if(a.length!==b.length||!timingSafeEqual(a,b))return null;const parsed=JSON.parse(Buffer.from(payload,'base64url').toString());if(!Number.isFinite(parsed.exp)||parsed.exp<Date.now())return null;return parsed}catch{return null}}
 export function cookie(req,name){const x=(req.headers?.cookie||'').split(';').map(x=>x.trim()).find(x=>x.startsWith(name+'='));return x?x.slice(name.length+1):''}
 export function cookieValue(name,value,maxAge){return `${name}=${value}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=${maxAge}`}
-export function newState(){const state=randomBytes(32).toString('base64url'),verifier=randomBytes(32).toString('base64url');return {state,verifier,challenge:createHash('sha256').update(verifier).digest('base64url')}}
+// Nylas Node SDK encodes the lowercase hex digest as unpadded base64, not RFC 7636's raw digest.
+export function nylasChallenge(verifier){const hex=createHash('sha256').update(verifier).digest('hex');return Buffer.from(hex,'ascii').toString('base64').replace(/=+$/,'')}
+export function newState(){const state=randomBytes(32).toString('base64url'),verifier=randomBytes(32).toString('base64url');return {state,verifier,challenge:nylasChallenge(verifier)}}
 export function session(req){const s=verify(cookie(req,COOKIE));return s?.kind==='session'&&s.email===(process.env.ALLOWED_GOOGLE_EMAIL||'').trim().toLowerCase()&&/^[a-zA-Z0-9_-]{1,128}$/.test(s.grant||'')?s:null}
 export function sessionCookie(grant,email){return cookieValue(COOKIE,sign({kind:'session',grant,email,exp:Date.now()+duration*1000}),duration)}
 export function stateCookie(state,verifier){return cookieValue(STATE_COOKIE,sign({kind:'state',state,verifier,exp:Date.now()+10*60*1000}),600)}
