@@ -21,3 +21,7 @@ Le callback Nylas pour le site actuel est `https://copilot-app-phi.vercel.app/ap
 ## Tests
 
 `node --test tests/*.test.js`, `npm run build`, `npm audit`. Ces tests simulent Nylas et Gemini, sans boîte réelle. Un test réel de la connexion et de l'analyse est à réaliser par le propriétaire. Aucune base n'est nécessaire dans cette version ; une sauvegarde/synchronisation future demandera une conception et une authentification adaptées.
+
+## Widget météo
+
+Depuis la vue d’ensemble, choisir une ville ; les résultats proposent la région et le pays pour distinguer les homonymes. La ville est mémorisée uniquement dans le navigateur. Les requêtes de recherche et les coordonnées sont envoyées à Open-Meteo directement par le navigateur, sans partager les e-mails ni les tâches. Conditions actuelles et prévisions sur trois jours, actualisation à l'ouverture et toutes les 30 minutes tant que la vue est ouverte, ainsi qu'à la demande. Données : Open-Meteo, CC BY 4.0, températures arrondies. L'API gratuite est réservée à l'usage non commercial ; vérifier les conditions pour un usage professionnel/commercial.
