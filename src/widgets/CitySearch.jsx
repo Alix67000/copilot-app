@@ -1,0 +1,10 @@
+import React,{useEffect,useRef,useState} from 'react';
+import {MapPin,Search} from 'lucide-react';
+import {findCities,cityLabel} from './weather.js';
+export default function CitySearch({onChoose,id='weather-city'}){
+ const [query,setQuery]=useState(''),[results,setResults]=useState(null),[searching,setSearching]=useState(false),[error,setError]=useState('');const searchId=useRef(0),abort=useRef(null);
+ useEffect(()=>()=>{searchId.current++;abort.current?.abort()},[]);
+ async function search(e){e.preventDefault();const term=query.trim();abort.current?.abort();const requestId=++searchId.current;setSearching(false);setResults(null);if(term.length<2){setError('Saisissez au moins deux caractères.');return}const controller=new AbortController();abort.current=controller;setSearching(true);setError('');try{const items=await findCities(term,controller.signal);if(requestId===searchId.current)setResults(items)}catch(err){if(requestId===searchId.current&&err.name!=='AbortError')setError('Recherche indisponible. Vérifiez votre connexion et réessayez.')}finally{if(requestId===searchId.current)setSearching(false)}}
+ function choose(city){abort.current?.abort();searchId.current++;setSearching(false);setQuery('');setResults(null);setError('');onChoose(city)}
+ return <div className="weather-search"><form onSubmit={search}><label className="sr-only" htmlFor={id}>Nom de la ville</label><div className="weather-input"><Search size={16}/><input id={id} value={query} onChange={e=>setQuery(e.target.value)} placeholder="Rechercher une ville" maxLength={100}/></div><button className="secondary" type="submit" disabled={searching}>{searching?'Recherche…':'Rechercher'}</button></form>{error&&<p className="weather-error" role="alert">{error}</p>}{results&&<div className="weather-results" aria-label="Villes trouvées">{results.length?results.map(c=><button type="button" key={c.id??cityLabel(c)} onClick={()=>choose(c)}><MapPin size={14}/>{cityLabel(c)}</button>):<p>Aucune ville trouvée. Essayez un autre nom.</p>}</div>}</div>
+}
