@@ -11,7 +11,7 @@ function click(w,text){const b=[...w.document.querySelectorAll('button')].find(x
    if(String(url).startsWith('/api/app-session'))return {ok:true,status:200};
    if(String(url)==='/api/nylas?action=session'&&first){first=false;return new Promise(r=>{resolveSession=r})}
    if(String(url)==='/api/nylas?action=session')return {ok:true,status:200,json:async()=>({email:'test@example.test'})};
-   if(String(url)==='/api/nylas?action=messages')return {ok:true,status:200,json:async()=>({messages:[{id:'fictif',subject:'Message fictif pour QA',from:{emailAddress:{name:'Test'}},receivedDateTime:new Date().toISOString(),bodyPreview:'Fictif',isRead:true}]})};
+   if(String(url).startsWith('/api/nylas?action=messages'))return {ok:true,status:200,json:async()=>({messages:[{id:'fictif',subject:'Message fictif pour QA',from:{emailAddress:{name:'Test'}},receivedDateTime:new Date().toISOString(),bodyPreview:'Fictif',isRead:true}]})};
    return {ok:false,status:401};
   };
   w.eval(result.outputFiles[0].text);await wait(100);click(w,'Se connecter avec Google');await wait(200);
@@ -23,4 +23,4 @@ function click(w,text){const b=[...w.document.querySelectorAll('button')].find(x
   assert.equal(JSON.parse(w.localStorage.getItem('pilotage.notes.v1'))[0].text,'Une note existante');d.window.close();
  }
  console.log('Chargement interface : attente, absence de données fictives, connexion, déconnexion et erreur réseau OK');
-})().catch(e=>{console.error(e);process.exitCode=1});
+})().catch(e=>{console.error(e);process.exit(1)});

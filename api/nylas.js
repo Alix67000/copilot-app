@@ -1,5 +1,5 @@
 import {appSession} from '../server/app-auth.js';
-import { ORIGIN,CALLBACK,READ_SCOPE,COOKIE,STATE_COOKIE,newState,stateCookie,session,nylas,nylasBase,allowedMessage,cookieValue } from '../server/nylas.js';
+import { ORIGIN,CALLBACK,READ_SCOPE,COOKIE,STATE_COOKIE,newState,stateCookie,session,nylas,nylasBase,allowedMessage,parseEmailHours,cookieValue } from '../server/nylas.js';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('Referrer-Policy','no-referrer');
  const action=req.query?.action;
@@ -17,10 +17,11 @@ export default async function handler(req,res){
  const s=session(req);if(!s)return res.status(401).json({error:'Connecte ton compte Gmail pour continuer.'});
  if(action==='session'&&req.method==='GET')return res.status(200).json({email:s.email});
  if(action==='messages'&&req.method==='GET'){
+  const hours=parseEmailHours(req.query?.hours);if(hours===null)return res.status(400).json({error:'Période invalide.'});
   try{
-   const q=new URLSearchParams({limit:'50',search_query_native:'from:emmaus-scherwiller.fr after:'+Math.floor((Date.now()-72*60*60*1000)/1000)});
+   const q=new URLSearchParams({limit:'50',search_query_native:'from:emmaus-scherwiller.fr after:'+Math.floor((Date.now()-hours*60*60*1000)/1000)});
    const result=await nylas('/v3/grants/'+encodeURIComponent(s.grant)+'/messages?'+q);
-   const messages=(Array.isArray(result.data)?result.data:[]).filter(allowedMessage).map(m=>({id:m.id,subject:m.subject||'',from:{emailAddress:{name:m.from[0].name?m.from[0].name+' <'+m.from[0].email+'>':m.from[0].email}},receivedDateTime:new Date(Number(m.date)*1000).toISOString(),bodyPreview:m.snippet||'',isRead:!m.unread}));
+   const messages=(Array.isArray(result.data)?result.data:[]).filter(m=>allowedMessage(m,hours)).map(m=>({id:m.id,subject:m.subject||'',from:{emailAddress:{name:m.from[0].name?m.from[0].name+' <'+m.from[0].email+'>':m.from[0].email}},receivedDateTime:new Date(Number(m.date)*1000).toISOString(),bodyPreview:m.snippet||'',isRead:!m.unread}));
    return res.status(200).json({messages,more:Boolean(result.next_cursor)});
   }catch(e){return res.status(e.status===401||e.status===403?401:502).json({error:e.status===401||e.status===403?'La connexion Nylas a expiré. Reconnecte Gmail.':'Impossible de charger tes e-mails. Réessaie dans un instant.'})}
  }

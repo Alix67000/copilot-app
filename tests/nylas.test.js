@@ -35,3 +35,11 @@ test('connexion, permissions et analyse avec Nylas simulé',async()=>{
  r=response();await handler({method:'GET',query:{action:'messages'},headers:{cookie:app()+'; '+c+'altered'}},r);assert.equal(r.statusCode,401);
  r=response();await handler({method:'POST',query:{action:'logout'},headers:{cookie:app()+'; '+c,origin:'https://example.com'}},r);assert.equal(r.statusCode,403);
 });
+
+test('période sélectionnée contrôlée à la récupération',async()=>{
+ const c=sessionCookie('grant-test','owner@example.com').split(';')[0];
+ for(const hours of ['2','24','48','72']){calls=[];const r=response();await handler({method:'GET',query:{action:'messages',hours},headers:{cookie:app()+'; '+c}},r);assert.equal(r.statusCode,200);const url=new URL(calls[0].url);const after=Number(url.searchParams.get('search_query_native').split('after:')[1]);assert.ok(Math.abs(after-(Date.now()/1000-Number(hours)*3600))<3)}
+ for(const hours of ['0','73','24.0','2 OR from:evil','']){calls=[];const r=response();await handler({method:'GET',query:{action:'messages',hours},headers:{cookie:app()+'; '+c}},r);assert.equal(r.statusCode,400);assert.equal(calls.length,0)}
+ assert.equal(allowedMessage({...sample,date:Math.floor((Date.now()-3*3600000)/1000)},2),false);
+ assert.equal(allowedMessage({...sample,date:Math.floor((Date.now()-3*3600000)/1000)},24),true);
+});
