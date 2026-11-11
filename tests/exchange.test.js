@@ -12,3 +12,9 @@ test('refuser données incomplètes, zéro et chiffres invalides',()=>{
  for(const value of [null,0,-5,'','invalid','Infinity','1e6','1,000'])assert.equal(parseNavasan({...fake,usd:{value,timestamp:stamp}}),null);
  assert.equal(parseNavasan({...fake,eur:undefined}),null);assert.equal(parseNavasan({...fake,afn:{value:'3',timestamp:0}}),null);assert.equal(validExchange({source:'Navasan',fetchedAt:1e30,quotes:{}}),false);assert.equal(calculateExchange(null),null);
 });
+
+test('montants : virgule, point, zéro, espaces et entrées invalides',async()=>{
+ const {parseAmount}=await import('../src/widgets/exchange.js');
+ assert.equal(parseAmount('150'),150);assert.equal(parseAmount('1 234,50'),1234.5);assert.equal(parseAmount('1.25'),1.25);assert.equal(parseAmount(',5'),0.5);assert.equal(parseAmount('0'),0);
+ for(const value of ['', ' ', '-1', 'abc', '1e3','1,2,3','Infinity','1000000001'])assert.equal(parseAmount(value),null);
+});

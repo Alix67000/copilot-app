@@ -7,3 +7,12 @@ export function calculateExchange(data){
  return {eur:{USD:eur.toman/usd.toman,AFN:eur.toman/afn.toman,IRR:eur.toman*10},usd:{EUR:usd.toman/eur.toman,AFN:usd.toman/afn.toman,IRR:usd.toman*10}};
 }
 export function quoteTime(data){return Math.min(...['usd','eur','afn'].map(k=>data.quotes[k].timestamp))*1000}
+
+// French decimal comma and optional grouping spaces; never silently interpret invalid input as zero.
+export function parseAmount(value){
+ if(typeof value!=='string')return null;
+ const cleaned=value.trim().replace(/[\s\u00a0\u202f]/g,'');
+ if(!/^(?:\d+(?:[.,]\d*)?|[.,]\d+)$/.test(cleaned))return null;
+ const number=Number(cleaned.replace(',','.'));
+ return Number.isFinite(number)&&number>=0&&number<=1_000_000_000?number:null;
+}
