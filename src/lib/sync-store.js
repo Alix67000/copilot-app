@@ -1,7 +1,7 @@
 import { doc, runTransaction } from 'firebase/firestore';
 import { SYNC_SCHEMA_VERSION } from './sync-records.js';
 
-export const COLLECTIONS = Object.freeze(['notes','tasks','deadlines','imports','settings']);
+export const COLLECTIONS = Object.freeze(['notes','links','tasks','deadlines','imports','settings']);
 const MAX_DATA_BYTES=64*1024;
 const encoder = new TextEncoder();
 

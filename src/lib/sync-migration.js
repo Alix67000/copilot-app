@@ -1,15 +1,17 @@
 import {recordsEqual} from './sync-records.js';
 import { documentId, validRecordInput } from './sync-store.js';
 import { cityIsValid } from '../widgets/weather.js';
+import { validLink, MAX_LINKS } from '../widgets/links.js';
 
 const definitions = [
-  ['pilotage.notes.v1','notes'], ['pilotage.tasks.v1','tasks'],
+  ['pilotage.notes.v1','notes'], ['pilotage.links.v1','links'], ['pilotage.tasks.v1','tasks'],
   ['pilotage.deadlines.v1','deadlines'], ['pilotage.imported.v1','imports'],
   ['pilotage.widgets.v1','settings'], ['pilotage.weather.city.v1','settings']
 ];
 function validItem(collection,item){
  if(collection==='imports') return typeof item==='string' && !!item && item.length<=1024;
  if(!item || typeof item!=='object' || Array.isArray(item) || typeof item.id!=='string' || !item.id || item.id.length>1024) return false;
+ if(collection==='links') return validLink(item);
  if(collection==='notes') return typeof item.text==='string' && item.text.trim().length>0 && item.text.length<=2000 && Number.isFinite(item.updatedAt) && Number.isFinite(new Date(item.updatedAt).getTime());
  if(collection==='tasks') return typeof item.title==='string' && item.title.length>0 && item.title.length<=150 && typeof item.done==='boolean';
  if(collection==='deadlines') return typeof item.title==='string' && item.title.length>0 && item.title.length<=150 && typeof item.date==='string' && /^\d{4}-\d{2}-\d{2}$/.test(item.date);
@@ -32,6 +34,7 @@ export async function planLegacyImport(raw, crypt=globalThis.crypto) {
     if(parsed!==null){const name=key==='pilotage.widgets.v1'?'widgets':'weather';records=[{id:await documentId(name,crypt),data:{name,value:parsed}}]}
    } else {
     if(!Array.isArray(parsed)) throw Error('not-an-array');
+    if(collection==='links' && parsed.length>MAX_LINKS) throw Error('too-many-links');
     const seen=new Set();
     for(const item of parsed){
      if(!validItem(collection,item)) throw Error('invalid-item');

@@ -2,7 +2,7 @@ import {planLegacyImport} from './sync-migration.js';
 import {recordsEqual,reconcileRecord,canEditSchema} from './sync-records.js';
 import {COLLECTIONS} from './sync-store.js';
 
-const collectionsToKey={notes:'pilotage.notes.v1',tasks:'pilotage.tasks.v1',deadlines:'pilotage.deadlines.v1',imports:'pilotage.imported.v1'};
+const collectionsToKey={notes:'pilotage.notes.v1',links:'pilotage.links.v1',tasks:'pilotage.tasks.v1',deadlines:'pilotage.deadlines.v1',imports:'pilotage.imported.v1'};
 function recordKey(r){return `${r.collection}/${r.id}`}
 function validateRemote(r) {
  if(!COLLECTIONS.includes(r.collection) || !/^i_[a-f0-9]{64}$/.test(r.id) || !canEditSchema(r.schemaVersion) || !Number.isSafeInteger(r.revision) || r.revision<1 || typeof r.deleted!=='boolean' || !r.data || typeof r.data!=='object' || Array.isArray(r.data)) throw Error('invalid-remote-record');
@@ -31,7 +31,7 @@ export async function prepareSync(raw,remoteRecords,baseline={},crypt=globalThis
 }
 // Prepare localStorage replacements; never writes them. Reject bad server data.
 export function buildLocalChanges(merged,raw){
- const result={}, groups={notes:[],tasks:[],deadlines:[],imports:[]};
+ const result={}, groups={notes:[],links:[],tasks:[],deadlines:[],imports:[]};
  for(const r of merged){
   if(r.collection==='settings') {
    if(r.data?.name==='widgets')result['pilotage.widgets.v1']=JSON.stringify(r.data.value);

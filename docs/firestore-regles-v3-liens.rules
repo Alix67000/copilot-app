@@ -1,0 +1,51 @@
+rules_version = '2';
+service cloud.firestore {
+ match /databases/{database}/documents {
+  function owner(uid) {
+   return request.auth != null
+     && request.auth.uid == uid
+     && request.auth.token.email_verified == true
+     && request.auth.token.email == 'TON_ADRESSE_GOOGLE'
+     && request.auth.token.firebase.sign_in_provider == 'google.com';
+  }
+  function envelope() {
+   return request.resource.data.keys().hasAll(['schemaVersion','revision','deleted','data'])
+     && request.resource.data.keys().hasOnly(['schemaVersion','revision','deleted','data'])
+     && request.resource.data.schemaVersion == 1
+     && request.resource.data.revision is int
+     && request.resource.data.revision >= 1
+     && request.resource.data.deleted is bool
+     && request.resource.data.data is map
+     && (!request.resource.data.deleted || request.resource.data.data.size() == 0);
+  }
+  function validPayload(c) {
+   let d = request.resource.data.data;
+   return request.resource.data.deleted || (
+     d.size() <= 12 && (
+       (c == 'links' && d.keys().hasOnly(['id','title','url','updatedAt']) && d.keys().hasAll(['id','title','url','updatedAt']) && d.id is string && d.id.size() > 0 && d.id.size() <= 1024 && d.title is string && d.title.size() > 0 && d.title.size() <= 100 && d.url is string && d.url.size() > 0 && d.url.size() <= 2048 && d.url.matches('https?://.+') && d.updatedAt is int && d.updatedAt >= 0) ||
+       (c == 'notes' && d.keys().hasAll(['id','text','updatedAt']) && d.id is string && d.id.size() <= 1024 && d.text is string && d.text.size() > 0 && d.text.size() <= 2000 && (d.updatedAt is int || d.updatedAt is float)) ||
+       (c == 'tasks' && d.keys().hasAll(['id','title','done']) && d.id is string && d.id.size() <= 1024 && d.title is string && d.title.size() > 0 && d.title.size() <= 150 && d.done is bool) ||
+       (c == 'deadlines' && d.keys().hasAll(['id','title','date']) && d.id is string && d.id.size() <= 1024 && d.title is string && d.title.size() > 0 && d.title.size() <= 150 && d.date is string && d.date.size() == 10) ||
+       (c == 'imports' && d.keys().hasOnly(['sourceId']) && d.sourceId is string && d.sourceId.size() > 0 && d.sourceId.size() <= 1024) ||
+       (c == 'settings' && d.keys().hasOnly(['name','value']) && d.name in ['widgets','weather'] && d.value is map)
+     )
+   );
+  }
+  match /pilotage_users/{uid}/{collection}/{id} {
+   allow read: if owner(uid) && collection in ['notes','links','tasks','deadlines','imports','settings'];
+   allow create: if owner(uid) && collection in ['notes','links','tasks','deadlines','imports','settings']
+     && id.matches('i_[a-f0-9]{64}') && envelope() && validPayload(collection) && request.resource.data.revision == 1;
+   allow update: if owner(uid) && collection in ['notes','links','tasks','deadlines','imports','settings']
+     && id.matches('i_[a-f0-9]{64}') && envelope() && validPayload(collection)
+     && resource.data.schemaVersion == 1 && resource.data.revision is int
+     && request.resource.data.revision == resource.data.revision + 1;
+   allow delete: if false;
+  }
+  // Conserver les règles préexistantes de l'ancienne phase.
+  match /pilotage_sync_v1/{uid} {
+   allow read, create, update: if owner(uid);
+   allow delete: if false;
+  }
+  match /{document=**} { allow read, write: if false; }
+ }
+}
