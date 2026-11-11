@@ -1,8 +1,10 @@
+import {appSession} from '../server/app-auth.js';
 import { ORIGIN,CALLBACK,STATE_COOKIE,cookie,verify,cookieValue,sessionCookie,nylas,safeGrant } from '../server/nylas.js';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('Referrer-Policy','no-referrer');
  const finish=(name)=>res.redirect(302,ORIGIN+'/?nylas='+name);
  if(req.method!=='GET')return res.status(405).end();
+ if(!appSession(req))return finish('session');
  const state=verify(cookie(req,STATE_COOKIE));res.setHeader('Set-Cookie',cookieValue(STATE_COOKIE,'',0));
  if(!state||state.kind!=='state'||typeof req.query?.state!=='string'||req.query.state!==state.state)return finish('session');
  if(req.query?.error)return finish(req.query.error==='access_denied'?'refus':'fournisseur');

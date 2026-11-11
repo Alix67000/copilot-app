@@ -1,3 +1,5 @@
+import {appSession} from '../server/app-auth.js';
+import {ORIGIN} from '../server/nylas.js';
 import { validateDeadline } from '../src/lib/deadline.js';
 import { session as nylasSession, nylas, allowedMessage, plain } from '../server/nylas.js';
 // Analyse côté serveur. Ne journalise ni jetons, ni courriels, ni réponse du modèle.
@@ -29,6 +31,8 @@ async function jsonFetch(url, options) {
 export default async function handler(req, res) {
   res.setHeader('Cache-Control', 'no-store');
   if (req.method !== 'POST') return res.status(405).json({error:'Méthode non autorisée.'});
+  if(req.headers.origin!==ORIGIN)return res.status(403).json({error:'Origine non autorisée.'});
+  if(!appSession(req))return res.status(401).json({error:'Connecte-toi à l’application avec Google.'});
   const apiKey = process.env.GEMINI_API_KEY;
   const allowedEmail = (process.env.ALLOWED_GOOGLE_EMAIL || '').trim().toLowerCase();
   if (!apiKey || !allowedEmail) return res.status(503).json({error:'L’analyse IA n’est pas configurée sur le serveur.'});

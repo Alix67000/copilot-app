@@ -1,7 +1,9 @@
+import {appSession} from '../server/app-auth.js';
 import { ORIGIN,CALLBACK,READ_SCOPE,COOKIE,STATE_COOKIE,newState,stateCookie,session,nylas,nylasBase,allowedMessage,cookieValue } from '../server/nylas.js';
 export default async function handler(req,res){
  res.setHeader('Cache-Control','no-store');res.setHeader('Referrer-Policy','no-referrer');
  const action=req.query?.action;
+ if(!appSession(req))return res.status(401).json({error:'Connecte-toi à l’application avec Google.'});
  if(action==='start'&&req.method==='GET'){
   if(!process.env.NYLAS_API_KEY||!process.env.NYLAS_CLIENT_ID||!process.env.NYLAS_SESSION_SECRET||!process.env.ALLOWED_GOOGLE_EMAIL)return res.status(503).send('Connexion Nylas non configurée.');
   const s=newState();res.setHeader('Set-Cookie',stateCookie(s.state,s.verifier));

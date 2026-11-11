@@ -1,6 +1,7 @@
 import React,{useEffect,useRef,useState} from 'react';
 import {collection,onSnapshot} from 'firebase/firestore';
-import {observeFirebaseUser,connectFirebase,disconnectFirebase,firestore,firebaseAuth} from '../lib/firebase-client.js';
+import {observeFirebaseUser,firebaseAuth} from '../lib/firebase-client.js';
+import {firestore} from '../lib/firebase-db.js';
 import {COLLECTIONS,firestoreWrite} from '../lib/sync-store.js';
 import {createLocalBackup} from '../lib/sync-backup.js';
 import {syncCycle,snapshotLocal} from '../lib/sync-cycle.js';
@@ -14,8 +15,15 @@ export default function SyncAccount({visible,onApplied}){
  const remoteRef=useRef(null),scheduleRef=useRef(null);const [conflictBackup,setConflictBackup]=useState(false);
  const onAppliedRef=useRef(onApplied);onAppliedRef.current=onApplied;
  useEffect(()=>observeFirebaseUser(setUser),[]);
- async function run(action){setBusy(true);setError('');try{await action()}catch(e){if(e?.code==='auth/popup-closed-by-user')setError('Connexion annulée.');else if(e?.code==='auth/unauthorized-domain')setError('Ce domaine doit être autorisé dans Firebase Authentication.');else setError('Connexion impossible. Vérifie la configuration Firebase et réessaie.')}finally{setBusy(false)}}
  function exportBackup(){try{const json=JSON.stringify(createLocalBackup(localStorage),null,2),url=URL.createObjectURL(new Blob([json],{type:'application/json'}));const a=document.createElement('a');a.href=url;a.download='pilotage-sauvegarde-'+new Date().toISOString().slice(0,10)+'.json';a.click();setTimeout(()=>URL.revokeObjectURL(url),30000);setBackup(true);setError('')}catch{setError('Sauvegarde impossible sur cet appareil. Synchronisation non activée.')}}
+ useEffect(()=>{
+  if(!user || owner)return;
+  try{
+   const arrayKeys=['pilotage.notes.v1','pilotage.tasks.v1','pilotage.deadlines.v1','pilotage.imported.v1'];
+   const empty=arrayKeys.every(k=>{const raw=localStorage.getItem(k);if(raw===null)return true;const v=JSON.parse(raw);return Array.isArray(v)&&v.length===0}) && ['pilotage.widgets.v1','pilotage.weather.city.v1'].every(k=>localStorage.getItem(k)===null);
+   if(empty){localStorage.setItem(OWNER,user.uid);setOwner(user.uid)}
+  }catch{/* Données présentes ou illisibles : demander une sauvegarde explicite. */}
+ },[user?.uid,owner]);
  function activate(){if(!backup)return;try{if(readOwner()&&readOwner()!==user.uid)throw Error();localStorage.setItem(OWNER,user.uid);setOwner(user.uid);setError('')}catch{setError('Impossible de préparer la synchronisation locale.')}}
  useEffect(()=>{
   if(!user || owner!==user.uid){setStatus('idle');return}
@@ -61,7 +69,7 @@ export default function SyncAccount({visible,onApplied}){
   catch{setError('Le conflit a changé ou la connexion est indisponible. Actualise et réessaie sans effacer tes données.')}
   finally{setBusy(false)}
  }
- return <div hidden={!visible}><section className="card settings-card"><div className="card-head"><div><div className="section-kicker">SYNCHRONISATION</div><h2>Compte de synchronisation</h2><p>Connexion indépendante de Gmail/Nylas, sans accès aux e-mails.</p></div></div><div className="settings-row"><div className="grow"><strong>Compte Google</strong><p>{user===undefined?'Vérification de la connexion…':user?user.email:'Non connecté'}</p><p role="status">{labels[status]||status}</p></div>{user?<button className="secondary" disabled={busy||status==='working'} onClick={()=>run(disconnectFirebase)}>Déconnecter</button>:<button className="primary" disabled={busy||user===undefined} onClick={()=>run(connectFirebase)}>Se connecter avec Google</button>}</div>
+ return <div hidden={!visible}><section className="card settings-card"><div className="card-head"><div><div className="section-kicker">SYNCHRONISATION</div><h2>Compte de synchronisation</h2><p>Connexion indépendante de Gmail/Nylas, sans accès aux e-mails.</p></div></div><div className="settings-row"><div className="grow"><strong>Compte Google</strong><p>{user===undefined?'Vérification de la connexion…':user?user.email:'Non connecté'}</p><p role="status">{labels[status]||status}</p></div></div>
  {user&&owner&&owner!==user.uid&&<div className="notice" role="alert">Cet appareil contient des données associées à un autre compte. La synchronisation est bloquée pour éviter de mélanger les données. Reconnecte le compte initial.</div>}
  {user&&(!owner||owner===user.uid)&&<div className="notice neutral"><strong>{owner?'Sauvegarde locale':'Avant la première synchronisation'}</strong><p>Le fichier contient tes notes, tâches, échéances et réglages, sans e-mails ni mots de passe. Il n’est pas chiffré : conserve-le dans un endroit sûr.</p><button className="secondary" onClick={exportBackup}>Télécharger une sauvegarde</button>{!owner&&<><p>Après sauvegarde, l’activation ajoute les données locales à ton espace Firebase. Les divergences ne sont pas écrasées automatiquement.</p><button className="primary" disabled={!backup} onClick={activate}>Activer la synchronisation</button></>}</div>}
  {conflicts.length>0&&<div className="notice" role="alert"><strong>{conflicts.length} élément(s) en conflit</strong><p>Télécharge les deux versions, puis choisis celle à conserver pour chaque élément. Le choix de l’une remplacera l’autre après synchronisation.</p><button className="secondary" onClick={exportConflicts}>Sauvegarder les versions en conflit</button>{conflicts.map(c=><div key={c.key} className="sync-conflict"><p><strong>{c.key.split('/')[0]}</strong></p><p>Cet appareil : <code>{JSON.stringify(c.local)}</code></p><p>Firebase : <code>{JSON.stringify(c.remote)}</code></p><button className="secondary" disabled={!conflictBackup||busy} onClick={()=>resolveConflict(c,'local')}>Garder cet appareil</button>{' '}<button className="secondary" disabled={!conflictBackup||busy} onClick={()=>resolveConflict(c,'remote')}>Garder Firebase</button></div>)}</div>}
