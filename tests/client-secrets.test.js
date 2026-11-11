@@ -12,6 +12,8 @@ test('détection d’une valeur secrète sans jamais l’afficher',async()=>{
   await writeFile(file,'prefix '+secret);let problems=await checkClientSecrets(dir,{GEMINI_API_KEY:secret});assert.equal(problems.length,1);assert(!problems.join(' ').includes(secret));
   await writeFile(file,'prefix '+encodeURIComponent('cle-fictive/avec+caracteres'));problems=await checkClientSecrets(dir,{GEMINI_API_KEY:'cle-fictive/avec+caracteres'});assert.equal(problems.length,1);
   await writeFile(file,'https://generativelanguage.googleapis.com/v1beta/models');problems=await checkClientSecrets(dir,{});assert.equal(problems.length,1);
+  await writeFile(file,'prefix '+secret);problems=await checkClientSecrets(dir,{NAVASAN_API_KEY:secret});assert.equal(problems.length,1);assert(!problems.join(' ').includes(secret));
+  await writeFile(file,'aucun secret');problems=await checkClientSecrets(dir,{VITE_NAVASAN_API_KEY:secret});assert.equal(problems.length,1);
   await writeFile(file,'aucun secret');problems=await checkClientSecrets(dir,{VITE_GEMINI_API_KEY:secret});assert.equal(problems.length,1);assert(!problems.join(' ').includes(secret));
  }finally{await rm(dir,{recursive:true,force:true})}
 });
